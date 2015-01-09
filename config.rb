@@ -136,4 +136,18 @@ helpers do
 
     all_files
   end
+  
+  def markers_hash
+    markers = []
+    data.meetups["locations"].each do |name, groups|
+      groups_with_coords = groups.reject{|g| g.lat.nil? || g.lon.nil?}
+      hash = Gmaps4rails.build_markers(groups_with_coords) do |group, marker|
+        marker.lat group.lat
+        marker.lng group.lon
+        marker.infowindow "<div class='map-marker'><h2>#{group.location}</h2><div class='view'><a href='#{group.url}' target='_blank'>Go to meetup page</a></div></div>"
+      end
+      markers = markers.concat(hash)
+    end
+    markers
+  end
 end
