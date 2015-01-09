@@ -10,6 +10,7 @@
 
 require "bundler/setup"
 require 'yaml'
+require 'geocoder'
 
 def git_initialize(repository)
   unless File.exist?(".git")
@@ -89,6 +90,32 @@ def generate_ember_data_docs
   puts "Built #{repo_path} with SHA #{sha}"
 end
 
+def geocode_meetups
+  output_path = 'meetups.yml'
+  puts "Geocoding records from #{output_path}... "
+
+  data = YAML.load_file(File.expand_path("./data/#{output_path}"))
+  data.each_value do |groups|
+    groups.each do |group|
+      next if group.has_key?("lat") and group.has_key?("lat")
+      coord = Geocoder.coordinates(group["location"])
+      if coord.nil?
+        puts "Unable to find coordinates for #{group["location"]}"
+        next
+      end
+      group["lat"] = coord[0]
+      group["lon"] = coord[1]
+      puts "Found coordinates for #{group["location"]}"
+      #throttle requests to API to avoid errors
+      sleep 0.1
+    end
+  end
+
+  File.open(File.expand_path("../data/#{output_path}", __FILE__), "w") do |f|
+    YAML.dump(data, f)
+  end
+end
+
 def build
   system "middleman build"
 end
@@ -154,4 +181,9 @@ task :deploy do |t, args|
     system "git commit -m '#{message.gsub("'", "\\'")}'"
     system "git push origin master" unless ENV['NODEPLOY']
   end
+end
+
+desc "Find coordinates for meetup locations"
+task :geocode do
+  geocode_meetups
 end
