@@ -64,7 +64,6 @@ def generate_ember_docs
 end
 
 def generate_ember_data_docs
-  output_path = 'data_api.yml'
   repo_path = ember_data_path
   sha = ENV['EMBER_DATA_SHA']
 
@@ -95,25 +94,26 @@ def geocode_meetups
   puts "Geocoding records from #{output_path}... "
 
   data = YAML.load_file(File.expand_path("./data/#{output_path}"))
-  data["locations"].each_value do |groups|
-    groups.each do |group|
-      next if group.has_key?("lat") and group.has_key?("lat")
-      coord = Geocoder.coordinates(group["location"])
-      if coord.nil?
-        puts "Unable to find coordinates for #{group["location"]}"
-        next
-      end
-      group["lat"] = coord[0]
-      group["lon"] = coord[1]
-      puts "Found coordinates for #{group["location"]}"
-      #throttle requests to API to avoid errors
-      sleep 0.1
+  meetups = data["locations"].values.flatten
+  meetups.each do |meetup|
+    coord = Geocoder.coordinates(meetup["location"])
+    if coord.nil?
+      puts "Unable to find coordinates for #{meetup["location"]}"
+      next
     end
+    meetup["lat"] = coord[0]
+    meetup["lon"] = coord[1]
+    puts "Found coordinates for #{meetup["location"]}"
+    #throttle requests to API to avoid errors
+    sleep 0.1
   end
 
-  File.open(File.expand_path("../data/#{output_path}", __FILE__), "w") do |f|
-    YAML.dump(data, f)
+  File.open(File.expand_path("../source/data/meetup_locations.json", __FILE__),"w") do |f|
+    f.write(meetups.to_json)
   end
+  # File.open(File.expand_path("../data/#{output_path}", __FILE__), "w") do |f|
+  #   YAML.dump(data, f)
+  # end
 end
 
 def build
